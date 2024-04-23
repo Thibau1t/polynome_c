@@ -1,0 +1,1617 @@
+* Setup :ignore:
+
+#+SETUPFILE: https://hozendev.github.io/hozen-style/hozen_latex_style.setup
+
+* Page de garde :ignore:
+** Informations :ignore:
+
+#+AUTHOR: Auteurs: DUREL Enzo, VILLEPREUX Thibault
+#+AUTHOR: \newline
+#+AUTHOR: Référent: BURON Maxime
+#+EMAIL: /
+#+TITLE: SDD TP1: Polynomes
+#+OPTIONS: toc:nil
+
+** Logo :ignore:
+
+#+ATTR_LATEX: :width 5cm :align left
+file:img/isima_logo.jpg
+
+** newpage :noexport:
+
+#+begin_export latex
+\newpage
+#+end_export
+
+** Table des matières :ignore:
+
+#+LATEX: \thispagestyle{empty}
+#+TOC: headlines 2
+#+LATEX: \clearpage
+#+LATEX: \pagenumbering{arabic} 
+
+** Liste des figures :ignore:
+
+#+begin_export latex
+\thispagestyle{empty}
+\listoffigures
+\clearpage
+\pagenumbering{arabic} 
+#+end_export
+
+** Liste des algorithmes :ignore:
+
+#+begin_export latex
+\thispagestyle{empty}
+\listofalgorithms
+\clearpage
+\pagenumbering{arabic} 
+#+end_export
+
+** newpage :ignore:
+
+#+begin_export latex
+\newpage
+#+end_export
+
+* Liste à faire                                                    :noexport:
+** DONE Corriger additions polynomes
+** DONE Faire produits polynomes
+** TODO Ajouter des tests
+*** DONE Check null p2 après addition
+* Consignes                                                        :noexport:
+** Présentation générale :
+*** description de l'objet du TP (3 lignes),
+*** description et schéma de la structure de données et des fichiers de données utilises,
+*** organisation du code source (dans quels fichiers sources sont les fonctions).
+** Détail de chaque fonction (programme principal compris) :
+*** algorithme de principe,
+*** lexique des notations (paramètres et variables locales) en en-tête.
+*** code source commenté (respecter le guide de style),
+** Compte rendu d'exécution
+*** un fichier zip nommé sous la forme votre_Nom_Prenom.zip, permettant de créer automatiquement un répertoire nommé Votre_Nom_Prenom après l’extraction.
+*** Le dossier doit contenir tous les codes source (pas les .o, ni les exécutables), un makefile, et les jeux de testcomplets (chaque fichier entrée et les résultats correspondants), tous les cas particuliers seront testés (en faire la liste)
+
+* Présentation
+Notre objectif principal est de pouvoir construire des fonctions de base pour manipuler
+des polynômes. Nous essayons donc de nous rapprocher le plus possible de la
+programmation modulaire avec les contraintes du langage C, pour pouvoir importer
+par la suite notre objet polynôme dans d'autres projets.
+
+Nous pouvons retrouver comme fonctions de base :
+- la dérivation d'un polynôme, 
+- l'addition de deux polynômes 
+- et la multiplication de deux polynômes.
+
+Un polynôme est stocké sous forme d'une liste simplement chaînée (aussi appelé linkedlist) de monôme. Il
+est donc nécessaire, de créer aussi des fichiers contenant des fonctions pour
+manipuler des listes simplement chaînées, et des fichiers pour manipuler des
+monômes, afin de respecter l'approche de la programmation modulaire.
+
+De plus, les maillons de la liste simplement chaînée sont rangés par ordre de
+degré croissant et il ne peut pas y avoir deux monômes différents avec un même
+degré, ou un monôme avec un coefficient nul.
+
+Il nous a été imposé de représenter des polynômes avec une
+linkedlist plutôt qu'avec un tableau pour les avantages suivants :
+- gérer la flexibilité de la taille plus facilement, exemple : avec la multiplication, le degré du polynôme peut être très vite élevé
+- une meilleure complexité dans beaucoup de cas, exemple : pour insérer lors de l'addition pas d'appel de decaleGauche ou de  decaleDroite sur un tableau, insertion en O(1) pour une linkedlist car on connaît le précédent
+- gain en complexité spaciale : on ne représente pas les monômes de coefficient nul
+- facilité de manipulation : insertion et suppression plus facile par exemple
+
+Dans la suite du rapport, nous expliquerons les structures de données, et détaillerons
+les principes des fonctions. 
+
+* Structures de Données
+** Description
+*** Monôme
+Un monôme est stocké sous forme d'une structure en C, son type est *monom_t*.
+
+Cette structure possède deux champs :
+- un champ coef, de type double, qui représente comme son nom l'indique le coefficient du monôme.
+- un champ degree, de type unsigned int, qui représente comme son nom l'indique le degré du monôme. Nous avons fait le choix de choisir une variable non signée afin de provoquer une erreur dans le programme si le degré devient négatif, car le polynôme ne doit pas avoir de degré négatif. Ainsi, nous pourrons en théorie stocker des degrés de taille un bit plus grand.
+
+*** Liste simplement chaînée
+
+Une liste simplement chaînée ou linkedlist est stockée sous forme de structure, son type est
+*cell_t*.
+
+Cette structure possède deux champs :
+- un champ val, de typage monom_t, qui représente les informations stockées sous la forme d'un monôme. 
+- un champ next, de typage cell_t *, qui représente un pointeur vers le maillon suivant du maillon actuel.
+
+Pour résumer, chaque maillon de la liste possède trois informations :
+- le degré du monôme du maillon
+- le coefficient du monôme du maillon
+- et un pointeur vers le prochain maillon, qui peut être NULL si le maillon courant est le dernier de la liste.
+
+*** Polynôme
+
+Un polynôme est une liste simplement chaînée. Il n'y a pas de structure
+polynôme spécialement défini.
+ 
+Le fichier source *polynome.c* possède seulement des fonctions pour manipuler cet
+objet. Et c'est grâce à ces dernières, que l'on peut garantir de l'unicité d'un
+maillon pour le degré monôme, ou la bonne insertion d'un monôme dans le
+polynôme, en respectant l'ordre de degré croissant par exemple.
+
+** Schéma
+
+#+BEGIN_SRC ditaa :exports results :file img/structure_cell.png :cmdline -E
+  +------+       +-------+-------+-------+       +-------+-------+-------+
+  |      |       |       |       |       |       |       |       |       |
+  |      +------>|       |       |       +------>|       |       |       +------> ...
+  |      |       |       |       |       |       |       |       |       |
+  +------+       +-------+-------+-------+       +-------+-------+-------+
+     a0	          deg    coeff   next             deg    coeff   next
+		 +-------+-------+		    
+			 |			    
+		       monom
+#+END_SRC
+
+#+CAPTION: Schéma d'un polynome non vide:
+#+RESULTS:
+[[file:img/structure_cell.png]]
+
+#+BEGIN_SRC ditaa :exports results :file img/structure_cell_empty.png :cmdline -E
+  +------+
+  |      |
+  | NULL |
+  |      |
+  +------+
+     a0	  
+#+END_SRC
+
+#+CAPTION: Schéma d'un polynôme vide:
+#+ATTR_LATEX: :width 3cm
+#+RESULTS:
+[[file:img/structure_cell_empty.png]]
+
+On retrouve les cases mémoires expliquées précédemment comme le degré d'un monôme, le
+coefficient d'un monôme, et le pointeur next de la liste chainée.
+La variable a0 quand à elle est un pointeur vers le premier maillon du
+polynome/linkedlist. De plus, le contenu de la case next du dernier maillon vaut NULL.
+
+** Fichiers de données
+
+La mise en place de tests unitaires a permis de vérifier la validité des
+fonctions, en détectant les erreurs dans le comportement des fonctions isolées,
+ce qui a contribué à améliorer la qualité et la fiabilité du code.
+
+Afin de garantir une couverture la plus complète possible de toutes les
+situations et des différents cas d'utilisation, nous avons utilisé divers
+fichiers de test. Ces fichiers sont présents dans /src/data.
+
+Les fichiers que l'on a créés sont :
+- poly1.txt à poly9.txt : pour les tests dans polynomial_main.c. 
+- listeChainneeTest.txt : pour les tests dans linkedlist_main.c, il y a un seul fichier test car on fait beaucoup d'insertion à la main, pour tester la fonction LL_add_cell.
+ 
+* Architecture
+
+Dans le dossier *tp1* se trouve plusieurs fichiers et répertoires.
+Il y a :
+- le répertoire *rapport* qui contient le rapport en pdf.
+- le répertoire *src* qui contient l'ensemble des fichiers de code et qui contient à son tour le répertoire *data* avec tous les fichiers de test 
+- le fichier README qui contient des informations de pré-requis, installations, et sur les auteurs
+
+Comme expliqué précédemment, afin de manipuler les polynômes, nous
+avons créé un objet monôme et un objet linkedlist. Les fonctions pour
+manipuler des monômes se trouve dans *valCell.c* et leurs prototypes
+dans *valCell.h*. Les fonctions pour manipuler des linkedlist se trouve
+dans *linkedList.c* et leurs prototypes dans *linkedList.h*. Il y a
+aussi le fichier *linkedlist_main.c* qui contient les tests unitaires
+pour certifiée la validité des méthodes.
+
+* Fonctions
+** package_example :noexport:
+*** example
+**** Description
+
+#+begin_example
+Cette fonction sert à comparer deux entiers et renvoyer le plus grand.
+#+end_example
+
+**** Algorithme
+
+#+begin_src latex
+  \begin{algorithm}
+	\caption{An algorithm with caption}\label{alg:two}
+	\KwData{$n \geq 0$}
+	\KwResult{$y = x^n$}
+	$y \gets 1$\;
+	$X \gets x$\;
+	$N \gets n$\;
+	\While{$N \neq 0$}{
+	  \eIf{$N$ is even}{
+		$X \gets X \times X$\;
+		$N \gets \frac{N}{2}$ \Comment*[r]{Ceci est un commentaire.}
+	  }{\If{$N$ is odd}{
+	  $y \gets y \times X$\;
+	  $N \gets N - 1$\;
+		}
+	  }
+	}
+  \end{algorithm}
+#+end_src 
+
+**** Signature
+
+#+begin_src c
+  int example(int a, int b);
+#+end_src
+
+**** Code source
+
+#+begin_src c
+  int main(void) {
+      return 0;
+  }
+#+end_src
+
+**** Lexique
+***** Paramètres
+- 
+- 
+- 
+***** Variables
+- 
+- 
+- 
+** linkedList
+*** LL_init_list
+**** Description
+
+#+begin_example
+La fonction initialise la liste à NULL.
+#+end_example
+
+**** Algorithme
+
+#+begin_src latex
+  \begin{algorithm}[H]
+    \caption{Procédure d'initialisation d'une liste}\label{alg:two}
+    \KwData{ES: adrHeadPt$}
+    $adrHeadPt \gets NIL$\;
+  \end{algorithm}
+#+end_src
+
+**** Signature
+
+#+begin_src c
+void LL_init_list(cell_t **adrHeadPt);
+#+end_src
+
+**** Code source
+
+#+begin_src c -n
+/**
+ * @fn void LL_init_list(cell_t **adrHeadPt)
+ * @brief Initialize a void list
+ * @param [in, out] adrHeadPt address of head pointer of the list 
+ */
+void LL_init_list(cell_t **adrHeadPt)
+{
+    // initialise la liste a NULL
+    *adrHeadPt = NULL;
+}
+#+end_src
+
+**** Lexique
+***** Paramètres
+- =cell_t ** adrHeadPt=: adresse du pointeur de tête de liste
+***** Variables
+- Aucune variable dans cette fonction. 
+
+*** LL_create_cell
+**** Description
+
+#+begin_example
+La fonction créée et initialise une nouvelle cellule. Elle renvoie NULL si
+l'allocation a échoué, sinon l'adresse de la cellule allouée.
+#+end_example
+
+**** Algorithme
+
+#+begin_src latex
+  \begin{algorithm}[H]
+    \caption{Fonction de création de cellule}\label{alg:two}
+    \KwData{E: $pmonome \neq NIL$}
+    $new \gets NIL$\;
+    $new \gets alloc(taille(cellule))$\;
+    \If{$new \neq NIL$}{
+      $m(coef(new)) \gets coef(pmonome)$\;
+      $m(degree(new)) \gets degree(pmonome)$\;
+      $m(next(new)) \gets NIL$\;
+    }
+    \Return{$new$\;}
+  \end{algorithm}
+#+end_src
+
+**** Signature
+
+#+begin_src c
+cell_t * LL_create_cell(monom_t * pmonome);
+#+end_src
+
+**** Code source
+
+#+begin_src c -n
+/** 
+ * @brief create a new cell for linked list from its data 
+ * @param [in] pdata address of the data
+ * @return address of the new cell
+ */
+cell_t * LL_create_cell(monom_t * pmonome)
+{
+    cell_t * new = NULL;
+    // alloue dynamiquement le monome
+    new = (cell_t *) malloc(sizeof(cell_t));
+    // si l'alloc a fonctionnee 
+    if (NULL != new)
+    {
+	new->val.coef    = pmonome->coef;   //init le coef
+	new->val.degree  = pmonome->degree; //init le degre
+	new->next        = NULL;            //init le suivant
+    }
+
+    return new; // retrun NULLsi erreur malloc
+}
+
+#+end_src
+
+**** Lexique
+***** Paramètres
+- =monom_t * pmonome=: adresse du monome à ajouter à la liste.
+***** Variables
+- =cell_t * new=: pointeur vers la nouvelle cellule créée.
+**** Hypothèse 
+Le monôme n'est pas NULL et contient des valeurs cohérentes. Par exemple, si on l'utilise pour
+représenter des polynômes, le coefficient n'est pas nul et le degré est positif.
+
+*** LL_add_cell
+**** Description
+
+#+begin_example
+La fonction ajoute une cellule à une liste à partir d'un précédent.
+#+end_example
+
+**** Algorithme
+
+#+begin_src latex
+  \begin{algorithm}[H]
+    \caption{Procédure d'ajout de cellule}\label{alg:two}
+    \KwData{ES: $a \neq NIL$, $prec \neq NIL$}
+    $next(a) \gets cm(prec)$\;
+    $m(cm(prec)) \gets a$\;
+  \end{algorithm}
+#+end_src
+
+**** Signature
+
+#+begin_src c
+void LL_add_cell(cell_t ** prec, cell_t * a);
+#+end_src
+
+**** Code source
+
+#+begin_src c -n
+/**
+ * @brief Insert a cell into a linked list at the given position
+ * @param [in, out]  prec address of previous pointer of the cell
+ * @param [in]  a address of the cell to be added to the linked list
+ */
+void LL_add_cell(cell_t ** prec, cell_t * a)
+{
+    a->next = *prec; // modifie le suivant du maillon qu'on insert
+    *prec   = a;     // realise le chainge avec prec
+}
+#+end_src
+
+**** Lexique
+***** Paramètres
+- =cell_t * a=: adresse de la cellule à ajouter.
+- =cell_t ** prec=: adresse de la cellule qui précède à après ajout.
+***** Variables
+- Aucune variable dans cette fonction. 
+
+**** Hypothèse 
+La cellule que l'on ajoute a été allouée précédemment, elle ne peut pas être NULL.
+**** Liste des cas
+LL_add_cell quand :
+- la liste est vide
+- il faut insérer au milieu de liste
+- il faut insérer en tête de liste
+- il faut insérer en fin de liste
+
+*** LL_create_list_fromFileName
+**** Description
+
+#+begin_example
+La fonction créée une liste à partir d'un nom d'un fichier. Si le fichier
+n'a pas réussi à être ouvert, la liste sera vide. Si une erreur d'allocation a
+lieu lors de la création des maillons pendant la lecture du fichier, la
+liste sera libérée proprement et la fonction renverra la liste vide.
+#+end_example
+
+**** Algorithme
+
+#+begin_src latex
+  \begin{algorithm}[H]
+    \caption{Fonction de création de liste à partir d'un nom de fichier}\label{alg:two}
+    \KwData{E: $filename$, ES: $a0$}
+    $ouvrir(filename)$\;
+    \While{non fin(filename)}{
+	$m(mread) \gets lireMonome(filename)$\Comment*{Lit le monome dans le fichier}
+	$m(curr) \gets creerCellule(mread)$\;
+	$m(prec) \gets chercherPrecedent(curr, pfcmp)$\;
+	$ajouterCellule(prec, curr)$\;
+    }
+    \Return{$a0$}\;
+  \end{algorithm}
+#+end_src
+
+**** Signature
+
+#+begin_src c
+cell_t ** LL_create_list_fromFileName(cell_t ** a0,
+				      char * fname,
+				      int (*pfcmp) (monom_t *, monom_t *));
+#+end_src
+
+**** Code source
+
+#+begin_src c -n
+/**
+ * @brief Create a linked list from a file
+ * @param [in, out] a0 address of head pointer of a linked list
+ * @param [in] fname name of a file containing the data for a linked list
+ * @param pfcmp fonction pointer for comparison of two cell's value
+ * @return head pointer of the linked list
+ */
+cell_t ** LL_create_list_fromFileName(cell_t ** a0,
+				      char * fname,
+				      int (*pfcmp) (monom_t *, monom_t *))
+{
+    FILE   *  fp    = fopen(fname, "r"); // si fname = NULL alors fp := NULL 
+    cell_t ** prec  = NULL;
+    cell_t *  curr  = NULL;
+    int  error      = 0 ;                // = 1 si erreur malloc
+    monom_t   mread;
+
+    LL_init_list(a0);
+
+    if (NULL != fp) { // ouverture fichier OK
+	//lire une ligne
+	while ( 2 ==  fscanf(fp, "%lg %d\n", &mread.coef, &mread.degree )
+		&& !error)
+	{
+	    //créer cellule
+	    curr = LL_create_cell(&mread);
+	   
+	    if (NULL != curr) // si malloc reussi
+	    {
+		//insérer cellule
+		prec = LL_search_prev(a0, &mread, pfcmp);
+		LL_add_cell(prec, curr);
+	    }
+	    else //message erreur malloc + free liste
+	    {
+		error = 1;
+		fprintf(stderr,
+			"%s : Erreur problème lors de l'allocation : %s\n",
+			__FUNCTION__,
+			fname);
+		// libere toute la liste en cas d'erreur
+		LL_free_list(a0);
+	    }	
+	}
+	fclose(fp);
+    }
+    else { // message erreur ouverture
+	fprintf(stderr,
+		"%s : 'Erreur lors de l'ouverture du fichier: %s'\n",
+		__FUNCTION__,
+		fname);
+    }
+    return a0; // retourne la liste
+}
+#+end_src
+
+**** Lexique
+***** Paramètres
+- =char * filename=: nom du fichier.
+- =cell_t ** a0=: pointeur vers le début de la liste.
+- =int * pfcmp (monom_t* , monom_t* )=: pointeur de fonction qui compare les monomes en paramètres.
+***** Variables
+- =cell_t * curr=: adresse de la cellule lue.
+- =cell_t ** prec=: adresse de la cellule qui précède lue d'après la fonction de comparaison.
+- =FILE * fp=: fichier de lecture.
+- =int * error=: erreur d'allocation de la mémoire pour curr.
+- =monom_t mread=: monome qui est lu dans le fichier et qui sert à créer la cellule.
+  
+**** Hypothèse
+La fonction pfcmp existe et elle est utilisable/fonctionelle.
+
+**** Liste des cas
+LL_create_liste_fromFileName foncitonne quand :
+- le fichier n'existe pas
+- le fichier est vide
+- le fichier contient des lignes sous la forme suivante : "double entier \n"
+
+*** LL_save_list_toFile
+**** Description
+
+#+begin_example
+La fonction écrit la liste dans un fichier pour la sauvegarder. Le fichier doit
+avoir été ouvert avant l'appel à la fonction.
+#+end_example
+
+**** Algorithme
+
+#+begin_src latex
+  \begin{algorithm}[H]
+    \caption{Procédure de sauvegarde d'une liste dans un fichier}\label{alg:two}
+    \KwData{E: $pfprint$, ES: $file \neq NIL$, $head$}
+    $m(curr) \gets cm(head)$\;
+    \While{$curr \neq NIL$}{
+	$pfprint(file, val(curr))$\Comment*{Ecrit le monome dans le fichier}
+	$m(curr) \gets next(curr)$\;
+    }
+  \end{algorithm}
+#+end_src
+
+**** Signature
+
+#+begin_src c
+void LL_save_list_toFile(FILE * file, cell_t * head,
+			 void (*pfprint) (FILE *, monom_t *))
+#+end_src
+
+**** Code source
+
+#+begin_src c -n
+/**
+ * @brief Write the linked list to an output stream
+ * @param [in] file file pointer of an output stream
+ * @param [in] head pointer of a linked list
+ * @param pfprint fonction pointer for printing the data of a cell on an output stream
+ */
+void LL_save_list_toFile(FILE * file, cell_t * head,
+			 void (*pfprint) (FILE *, monom_t *))
+{
+    cell_t * curr = head;
+    if (NULL != file) // verifie que FILEa ete correctement ouvert
+    {
+	while (NULL != curr) // parcours la liste : tq on est pas a la fin
+	{
+	    (*pfprint)(file, &curr->val); // ecrit dans le fichier
+ 	    curr = curr->next;            // passage au maillon suivant
+	}	
+    }
+}
+#+end_src
+
+**** Lexique
+***** Paramètres
+- =FILE * file=: fichier ouvert.
+- =cell_t * head=: pointeur vers le début de la liste.
+- =void * pfprint (FILE* , monom_t* )=: pointeur de fonction qui affiche le monome dans le fichier.
+***** Variables
+- =cell_t * curr=: adresse de la cellule courante. (parcours)
+
+**** Hypothèse
+La fonction pfprint existe et elle est utilisable/fonctionelle.
+**** Liste des cas
+LL_save_list_toFile fonctionne quand :
+- la liste est vide
+- la liste est non vide
+- le fichier a précédement été ouvert
+
+*** LL_save_list_toFileName
+**** Description
+
+#+begin_example
+La fonction écrit la liste dans un fichier pour la sauvegarder. Si le fichier n'a
+pas réussi à être ouvert (problème de nom, de droit), la fonction ne fait rien à
+part afficher un message d'erreur.
+#+end_example
+
+**** Algorithme
+
+#+begin_src latex
+  \begin{algorithm}[H]
+    \caption{Procédure de sauvegarde d'une liste dans un fichier à partir de son nom}\label{alg:two}
+    \KwData{E: $pfwrite$, ES: $fname$, $head$}
+    $m(curr) \gets cm(head)$\;
+    $m(file) \gets ouvrirFichier(fname)$\;
+    \eIf{$file \neq NIL$}{
+      \While{$curr \neq NIL$}{
+	$pfwrite(file, val(curr))$\Comment*{Ecrit le monome dans le fichier}
+	$m(curr) \gets next(curr)$\;
+      }
+    }{
+      $afficherErreur()$\;
+    }
+    $fermerFichier(file)$\n
+  \end{algorithm}
+#+end_src
+
+**** Signature
+
+#+begin_src c
+void LL_save_list_toFileName(cell_t * head, char * fname, void (*pfwrite) (FILE *, monom_t *));
+#+end_src
+
+**** Code source
+
+#+begin_src c -n
+  /**
+   * @brief Save a linked list into a file
+   * @param [in, out] head : head pointer of a linked list
+   * @param [in] fname name of the backup file
+   * @param pfwrite fonction pointer for writing the data of a cell to a output stream
+   */
+void LL_save_list_toFileName(cell_t * head, char * fname, void (*pfwrite) (FILE *, monom_t *))
+{
+    cell_t * curr = head;
+    FILE * fp;
+   
+    fp   = fopen(fname, "w+"); // ecrase le fichier s'il existe
+    if (NULL != fp)   // si on a reussi a ouvrir le fichier
+    {
+	
+	while (NULL != curr)  // parcours la liste : tq on est pas a la fin
+	{
+	    (*pfwrite)(fp, &(curr->val)); // ecrit dans le fichier
+ 	    curr = curr->next;            // passage au maillon suivant
+	}
+	fclose(fp);  // ferme le fichier
+    }
+    else // message d'erreur si l'ouverture ne fonctionne pas
+    {
+	fprintf(stderr, "%s : 'Erreur lors de l'ouverture du fichier %s'",
+		__FUNCTION__,
+		fname);
+    }
+}
+#+end_src
+
+**** Lexique
+***** Paramètres
+- =FILE * fname=: nom du fichier.
+- =cell_t * head=: pointeur vers le début de la liste.
+- =void * pfwrite (FILE* , monom_t* )=: pointeur de fonction qui affiche le monome dans le fichier.
+***** Variables
+- =cell_t * curr=: adresse de la cellule courante. (parcours)
+- =FILE * fp=: fichier de nom fname.
+
+**** Hypothèse 
+La fonction pfwrite existe et elle est utilisable/fonctionelle.
+**** Liste des cas
+LL_save_list_toFileName fonctionne quand :
+- la liste est vide
+- la liste est non vide
+- le fichier existe et à les droits d'écriture
+
+*** LL_search_prev
+**** Description
+
+#+begin_example
+La fonction cherche l'adresse du maillon précédent une valeur dans
+une liste triéée. La comparaison se fait par le pointeur d'une fonction
+de comparaison qui renvoie:
+- '=0' si les éléments sont égaux.
+- '<0' si l'élément a est plus petit que b.
+- '>0' si l'élément a est plus grand que b.
+#+end_example
+
+**** Algorithme
+
+#+begin_src latex
+  \begin{algorithm}[H]
+    \caption{Fonction de rechercher d'un précédent d'une valeur}\label{alg:two}
+    \KwData{E: $pfcmp$, ES: $a0$, $value$}
+    $m(prec) \gets a0$\;
+    \While{$cm(prec) \neq NIL$ ET ALORS $pfcmp(value, val(cm(prec))) > 0$}{
+      $m(prec) \gets adresse(next(cm(prec)))$\;
+    }
+    \Return $prec$\n
+  \end{algorithm}
+#+end_src
+
+**** Signature
+
+#+begin_src c
+cell_t ** LL_search_prev(cell_t ** a0, monom_t * value, int (*pfcmp) (monom_t *, monom_t *));
+#+end_src
+
+**** Code source
+
+#+begin_src c -n
+  /**
+   * @brief Search a value in a linked list, and return the address of the previous pointer
+   * @param [in] a0 address of the head pointer
+   * @param [in] value address of the value to search
+   * @param pfcmp fonction pointer for comparison of two values
+   * @return the address of the previous pointer
+   */
+cell_t ** LL_search_prev(cell_t ** a0, monom_t * value, int (*pfcmp) (monom_t *, monom_t *))
+{
+    cell_t ** prec = a0; // maillon precedent
+    // tq prec!= NULL et que le maillon courant est pluspetit quecelui quel'on cherche
+    while (*prec != NULL && (*pfcmp)(value, &(*prec)->val) > 0)
+    {
+	prec = &((*prec)->next); // on avance d'un maillon
+    }
+    return prec; // retourne le precedent
+}
+#+end_src
+
+**** Lexique
+***** Paramètres
+- =cell_t ** a0=: pointeur vers le début de la liste.
+- =int * pfcmp (monom_t* , monom_t* )=: pointeur de fonction qui affiche le monome dans le fichier.
+- =monom_t* value=: monome qui représente la valeur a comparer.
+***** Variables
+- =cell_t ** prec=: adresse du maillon précédent. (parcours)
+
+**** Hypothèse 
+La fonction pfcmp existe et elle est utilisable/fonctionelle.
+C'est la fonction pfcmp qui gère si le maillon est NULL.
+
+**** Liste des cas
+LL_search_prev fonctionne quand :
+- la liste est vide (renvoie NULL)
+- le maillon que l'on cherche est la tête de la liste
+- le maillon que l'on cherche est en fin de la liste
+- le maillon que l'on cherche est au milieu de la liste
+- le maillon que l'on cherche n'est pas dans la liste
+
+*** LL_del_cell
+**** Description
+
+#+begin_example
+Procédure de suppression d'une cellule.
+#+end_example
+
+**** Algorithme
+
+#+begin_src latex
+  \begin{algorithm}[H]
+    \caption{Procédure de suppression d'une cellule}\label{alg:two}
+    \KwData{ES: $prec$}
+    $m(tmp) \gets cm(prec)$\;
+    $m(prec) \gets next(cm(prec))$\;
+    $m(next(tmp)) \gets NIL$\;
+    $libérer(tmp)$\;
+  \end{algorithm}
+#+end_src
+
+**** Signature
+
+#+begin_src c
+void LL_del_cell(cell_t ** prec);
+#+end_src
+
+**** Code source
+
+#+begin_src c -n
+  /**
+   * @brief Delete a cell from a linked list
+   * @param [in, out] prec address of the previous pointer of the cell to delete
+   */
+void LL_del_cell(cell_t ** prec)
+{
+    cell_t * tmp = *prec;
+    (*prec) = (*prec)->next;
+    (*tmp).val.coef   = 0;   // mets a 0 dans la RAM (nettoyage de memoire)
+    (*tmp).val.degree = 0;   // permet de rendre confidentiel les donnees
+    (*tmp).next = NULL;      // manipulees après fin du programme
+                             // limite le reverse engineering sur les poly :)
+    
+    free(tmp);               // liberation du maillon
+}
+
+#+end_src
+
+**** Lexique
+***** Paramètres
+- =cell_t ** prec=: pointeur vers l'adresse du maillon à supprimer.
+***** Variables
+- =cell_t * tmp=: sauvegarde du maillon à supprimer pour le libérer. (parcours)
+
+**** Hypothèses
+Il faut avoir donné le précédent de la cellule à supprimer et que la cellule
+précédent et courant ne soit pas NULL.
+
+*** LL_free_list
+**** Description
+
+#+begin_example
+Procédure de libération d'une liste.
+#+end_example
+
+**** Algorithme
+
+#+begin_src latex
+  \begin{algorithm}[H]
+    \caption{Procédure de libération d'une liste}\label{alg:two}
+    \KwData{ES: $a0$}
+    $m(curr) \gets cm(a0)$\;
+    \While{$cm(curr) \neq NIL$}{
+      $suppressionCellule(curr)$\;
+    }
+    $cm(a0) \gets NIL$
+  \end{algorithm}
+#+end_src
+
+**** Signature
+
+#+begin_src c
+void LL_del_cell(cell_t ** prec);
+#+end_src
+
+**** Code source
+
+#+begin_src c -n
+  /**
+   * @brief Free the memory location occupied by a linked list
+   * @param [in, out] a0 address of head pointer of a linked list
+   */
+void LL_free_list(cell_t ** a0)
+{
+    cell_t * curr = *a0; // maillon courant
+ 
+    while (curr != NULL) // parcours de la liste
+    {
+	LL_del_cell(&curr); // supprime le maillon en cours
+    }
+    (*a0) = NULL; // mets a0 a NULL car la liste est vide
+}
+#+end_src
+
+**** Lexique
+***** Paramètres
+- =cell_t ** a0=: pointeur vers la tête de la liste.
+***** Variables
+- =cell_t * curr=: pointeur vers le maillon courant.
+
+**** Liste des cas
+LL_free_list fonctionne quand :
+- la liste est vide
+- la liste est non vide
+
+*** LL_multication_monome_to_list
+**** Description
+
+#+begin_example
+Fonction qui calcule la multiplication d'un polynôme avec un monôme et qui
+retourne le polynome résultant.
+#+end_example
+
+**** Algorithme
+
+#+begin_src latex
+  \begin{algorithm}[H]
+    \caption{Procédure de libération d'une liste}\label{alg:two}
+    \KwData{E: $monome \neq NIL$, ES: $a0$}
+    $m(polyRes) \gets NIL$\;
+    $m(precA0) \gets a0$\;
+    $m(precPolyRes) \gets polyRes$\;
+    \While{$cm(precA0) \neq NIL$}{
+      \Comment{multiplication du monomes et d'un maillon de a0}
+      $m(monomTmp) \gets multiplicationMonome(val(cm(precA0)), monome)$\;
+      \Comment{création du maillon résultant issu de la multiplication}
+      $m(cellTmp) \gets creerCellule(monomTmp)$\;
+      \Comment{ajout du maillon au polynome résultant}
+      $ajouterCellule(precPolyRes, cellTmp)$\;
+      \Comment{Avancement dans le polynome a0 et le polynome résultant}
+      $m(precA0) \gets next(cm(precA0))$\;
+      $m(precPolyRes) \gets next(cm(precPolyRes))$\;
+    }
+    \Return{$polyRes$}
+  \end{algorithm}
+#+end_src
+
+**** Signature
+
+#+begin_src c
+cell_t * LL_multication_monome_to_list(monom_t * monome, cell_t **  a0)
+#+end_src
+
+**** Code source
+
+#+begin_src c -n
+  /**
+   * @brief Multiply a list by a monome
+   * @param [in, out] a0 address of head pointer of a linked list
+   * @param [in, out] monome address of the monome used for multiplication
+   * @return result of the multiplication between the list and the monome in a new list allocated in the function
+   */
+cell_t * LL_multication_monome_to_list(monom_t * monome, cell_t **  a0)
+{
+    cell_t * list_res = NULL; // liste contenant le resultat
+    cell_t ** prec_a0 = a0;   // precedent du maillon de la liste en parametre
+    cell_t ** prec_list_res = &list_res; // precedent maillon en cours de la
+					 // liste resultat
+    monom_t monom_tmp; // variable temporaire pour plus de lisibilitee
+    cell_t * cell_tmp; // variable temporaire pour plus de lisibilitee
+
+    if (NULL != monome) // si le monome n'est pas NULL
+	                // car sinon a0 * NULL= NULL
+    {
+	while((*prec_a0) != NULL) // parcours a0
+	{
+	    // multiplication entre le monome un maillon de a0
+	    monom_tmp = monom_multiplication(&(*prec_a0)->val, monome);
+
+	    // alloue la memoire pour creer le poly resultat
+	    cell_tmp = LL_create_cell(&monom_tmp);
+
+	    // ajoute le produit dans le poly resultat, respecte l'ordre
+	    // croissant, pas besoin de s'en occupe  
+	    LL_add_cell(prec_list_res, cell_tmp);
+
+	    // avance le prec de a0 et prec de poly res
+	    prec_a0       = &(*prec_a0)->next;
+	    prec_list_res = &(*prec_list_res)->next;
+	}
+    }
+    return list_res; // retourne la liste resultat, nouvelle liste
+}
+#+end_src
+
+**** Lexique
+***** Paramètres
+- =cell_t ** a0=: pointeur vers la tête de la liste.
+- =monom_t* monome=: pointeur sur le monome à multiplier à la liste.
+***** Variables
+- =cell_t * poly_res=: adresse du polynome résultat.
+- =cell_t ** prec_a0=: adresse de maillon précédent de la liste a0 pour opérer la multiplication. (parcours)
+- =cell_t ** prec_poly_res=: adresse de maillon précédent de la liste poly_res pour opérer la multiplication. (parcours)
+- =monom_t monom_tmp=: monom résultant de la multiplication entre les monomes de a0 et monome en paramètre.
+- =cell_t * cell_tmp=: pointeur vers la cellule contenant le monome résultant.
+
+**** Liste des case
+LL_multication_monome_to_list fonctionne quand :
+- quand a0 est NULL: renvoie une nouvelle liste NULL
+- quand le monôme est NULL : renvoie une nouvelle liste NULL
+- quand ni le monôme, ni la liste est NULL : renvoie la multiplication classique dans une nouvelle liste, allouée dans la fonction
+
+** valCell
+*** monom_degree_cmp
+**** Description
+
+#+begin_example
+La fonction compare le degré de 2 monomes a et b. Elle renvoie :
+- >0 si a est plus grand que b
+- <0 si a est plus petit que b
+- =0 si a est égal à b ou au minimum un monôme est NULL
+#+end_example
+
+**** Algorithme
+
+#+begin_src latex
+  \begin{algorithm}[H]
+    \caption{Fonction de création de cellule}\label{alg:two}
+    \KwData{E: $m1, m2$}
+    $res \gets 0$\;
+    \If{$m1 \neq NIL$ ET $m2 \neq NIL$}{
+      $m(res) \gets (degree(m1) - degree(m2))$\;
+    }
+    \Return{$res$\;}
+  \end{algorithm}
+#+end_src
+
+**** Signature
+
+#+begin_src c
+int monom_degree_cmp(monom_t * m1, monom_t * m2);
+#+end_src
+
+**** Code source
+
+#+begin_src c -n
+  /**
+   * @brief Compare the degree of two monomials
+   * @param [in] m1 address of the first monomial
+   * @param [in] m2 address of the second monomial
+   * @return <0 if m1.degree<m2.degree; =0 if m1.degree=m2.degree;  >0 if  m1.degree>m2.degree
+   * 0 if pointeur null
+   */
+int monom_degree_cmp(monom_t * m1, monom_t * m2)
+{
+    int res = 0; // 0 si au minimum un des monomes est NULL
+    if(m1 != NULL && m2 != NULL) // si les deuxmonomes ne sont pas NULL
+    { 
+	res = (m1->degree - m2->degree); // difference entre les deux degres
+    }
+    return res;
+}
+#+end_src
+monom_degree_cmp fonctionne quand :
+- les deux pointeurs de monômes sont différents de NULL 
+- si un pointeur de monôme vaut NULL : renvoie 0 
+- si les deux pointeurs de monôme sont NULL : renvoie 0
+
+**** Lexique
+***** Paramètres
+- =monom_t * m1=: adresse du premier monome à comparer.
+- =monom_t * m2=: adresse du deuxième monome à comparer.
+***** Variables
+- =int res=: contient le résultat de la différence des degrées des monomes.
+**** Liste des cas
+
+*** monom_save2file
+**** Description
+
+#+begin_example
+La procédure écrit dans un fichier donné en paramètre le monome donné
+en paramètre avec la sérialisation suivante: "coef degree", avec une
+précision de 3 chiffres après la virgule pour le coeff.
+#+end_example
+
+**** Algorithme
+
+#+begin_src latex
+  \begin{algorithm}[H]
+    \caption{Procédure de sauvegarde d'un monome dans un fichier}\label{alg:two}
+    \KwData{E: $monome$, ES: $file$}
+    \If{$file \neq NIL$ ET $monome \neq NIL$}{
+      $afficher(file, "\%.3f \%d\n", monome)$\;
+    }
+  \end{algorithm}
+#+end_src
+
+**** Signature
+
+#+begin_src c
+void monom_save2file(FILE * file, monom_t * monome);
+#+end_src
+
+**** Code source
+
+#+begin_src c -n
+  /**
+   * @brief write the information of a monomial to the given output stream
+   * @param [in] file file pointer of an output stream
+   * @param [in] m address of a monomial
+   */
+void monom_save2file(FILE * file, monom_t * monome)
+{
+    if (file != NULL && monome != NULL) // si le fichier est ouvert et le
+					// pointeur n'est pas a NULL
+    {
+	fprintf(file, "%.3f %d\n", monome->coef, monome->degree);  // ecrit dans file 
+    }
+}
+#+end_src
+
+**** Lexique
+***** Paramètres
+- =monom_t * monome=: adresse du monome à sauvegarder.
+- =FILE * file=: fichier où écrire.
+***** Variables
+- Aucune variable dans cette fonction. 
+**** Liste des cas
+monom_save2file fonctionne quand :
+- le monome est NULL : ne fait rien
+- le pointeur de fichier pointe sur NULL: ne fait rien
+- le monome exite et le fichier est ouvert: ecrit le monome correctement
+
+*** monom_save2fileForPoly
+**** Description
+
+#+begin_example
+La procédure écrit dans un fichier donné en paramètre le monome donné
+en paramètre avec la sérialisation suivante: "(coef, degree)", avec une
+précision de 2 chiffres après la virgule pour le coeff.
+Cette fonction sert pour les tests de polynomes.
+#+end_example
+
+**** Algorithme
+
+#+begin_src latex
+  \begin{algorithm}[H]
+    \caption{Procédure de sauvegarde d'un monome dans un fichier (polynome)}\label{alg:two}
+    \KwData{E: $monome$, ES: $file$}
+    \If{$file \neq NIL$ ET $monome \neq NIL$}{
+      $afficher(file, "(\%.2f, \%d) ", monome)$\;
+    }
+  \end{algorithm}
+#+end_src
+
+**** Signature
+
+#+begin_src c
+void monom_save2fileForPoly(FILE * file, monom_t * monome);
+#+end_src
+
+**** Code source
+
+#+begin_src c -n
+  /**
+   * @brief write the information of a monomial to the given output stream for
+   * polynome test
+   * @param [in] file file pointer of an output stream
+   * @param [in] m address of a monomial
+   */
+void monom_save2fileForPoly(FILE * file, monom_t * monome)
+{
+    if (file != NULL && monome != NULL) // si le fichier est ouvert et le
+					// pointeur n'est pas a NULL
+    {
+	fprintf(file, "(%.2f, %d) ", monome->coef, monome->degree); // ecrit dans file 
+    }
+}
+#+end_src
+
+**** Lexique
+***** Paramètres
+- =monom_t * monome=: adresse du monome à sauvegarder.
+- =FILE * file=: fichier où écrire.
+***** Variables
+- Aucune variable dans cette fonction. 
+**** Liste de cas
+
+monom_save2fileForPoly fonctionne quand :
+- le monome est NULL : ne fait rien
+- le pointeur de fichier pointe sur NULL: ne fait rien
+- le monome exite et le fichier est ouvert: ecrit le monome correctement
+
+*** monom_multiplication
+**** Description
+
+#+begin_example
+La fonction retourne un nouveau monome résultant de la multiplication
+entre deux monomes donnés en paramètres. Pour cela, on additionne (resp.
+multiplie) leurs degrés (resp. coefficients).
+#+end_example
+
+**** Algorithme
+
+#+begin_src latex
+  \begin{algorithm}[H]
+    \caption{Fonction de multiplication de deux polynomes}\label{alg:two}
+    \KwData{$monome1, monome2$}
+    $m(res) \gets creerMonome()$\;
+    $m(coef(res)) \gets coef(monome1) * coef(monome2)$\;
+    $m(degree(res)) \gets degree(monome1) + degree(monome2)$\;
+    \Return{$res$\;}
+  \end{algorithm}
+#+end_src
+
+**** Signature
+
+#+begin_src c
+monom_t monom_multiplication(monom_t * monome1, monom_t * monome2);
+#+end_src
+
+**** Code source
+
+#+begin_src c -n
+  /**
+   * @brief Multiply two monomes together. The first receives the result
+   * @param [in, out] monome1 address of the monome which receives the
+   * multiplication between itself and the monome2
+   * @param [in, out] monome2 address of the second monome participating in the
+   * multiplication
+   * @return result of the multiplication between the 2 monomes passed in parameter
+   */
+monom_t monom_multiplication(monom_t * monome1, monom_t * monome2)
+{
+    monom_t res; // monome resultat
+    res.coef = monome1->coef * monome2->coef; // multiplication des coef
+    res.degree = monome1->degree + monome2->degree; // somme des degres
+    return res;
+}
+#+end_src
+
+**** Lexique
+***** Paramètres
+- =monom_t * monome1=: adresse du premier monome à multiplier.
+- =monom_t * monome1=: adresse du deuxième monome à multiplier.
+***** Variables
+- =monom_t res= monome correspondant au résultat de la multiplication des deux monomes donnés en paramètres.
+**** Hypothèse
+Les deux pointeurs de monôme ne pointent pas sur NULL.
+
+**** Liste des cas
+monom_multiplication fonctionne quand :
+- les pointeurs des deux monômes pointent sur des monômes existant sinon erreur segmentation (cf hypothèse)
+
+** polynomial
+*** poly_derive
+**** Description
+
+#+begin_example
+La fonction dérive un polynôme représenté par une liste chaînée donnée en paramètre.
+Le polynôme est supposé trié par ordre croissant de ses degrés.
+Le polynôme est aussi supposé n'avoir aucun monome de même degrés.
+Pour cela, on vérifie si la première cellule est de degré 0:
+Si oui, on le supprime.
+On parcourt les cellules du polynomes en effectuant les opérations suivantes:
+- le coefficient prend le résultat de la multiplication entre le degré de la cellule
+  et de son coefficient.
+- le degree prend le degree du monome moins 1.
+#+end_example
+
+**** Algorithme
+
+#+begin_src latex
+  \begin{algorithm}[H]
+    \caption{Procédure de dérivation d'un polynome}\label{alg:two}
+    \KwData{E: $polynome$}
+    $prec \gets polynome$\;
+    \If{$m1 \neq NIL$ ET $m2 \neq NIL$}{
+      $m(res) \gets (degree(m1) - degree(m2))$\;
+    }
+    \While{$cm(prec) \neq NIL$}{
+      $m(coef(val(cm(prec)))) \gets cm(coef(val(cm(prec)))) * cm(degree(val(cm(prec))))$\;
+      $m(degree(val(cm(prec)))) \gets cm(degree(val(cm(prec)))) - 1$\;
+      $m(prec) \gets adresse(next(cm(prec)))$\;
+    }
+  \end{algorithm}
+#+end_src
+
+**** Signature
+
+#+begin_src c
+void poly_derive(cell_t ** polynome);
+#+end_src
+
+**** Code source
+
+#+begin_src c -n
+  /**
+   * @brief compute 'in place' the derive of a polynomial 
+   * @param [in, out] xxx address of a polynomial's head pointer
+   */
+void poly_derive(cell_t ** polynome)
+// hypothese : fonctione pour tous les polynomes trié par degré croissant
+{
+    cell_t ** prec = polynome; // parcours avec prec pour supprimer si deg == 0
+
+    if ((*prec) != NULL && (*prec)->val.degree == 0) // deg maillonTete == 0
+    // meilleure complexité que de testere dans le TQ a chaque fois
+    // hyp: triee oredre croissant donc supprime tete si deg == 0
+    {
+	LL_del_cell(prec);  // supprime tete
+    }
+    while ((*prec) != NULL) // parcours polynome avec prec
+    {
+	(*prec)->val.coef  *= (*prec)->val.degree;  // change coef (coef* deg)
+	(*prec)->val.degree = (*prec)->val.degree - 1; // decremente deg
+	prec = &((*prec)->next); // passage maillon suivant
+    }
+}
+#+end_src
+
+**** Lexique
+***** Paramètres
+- =cell_t * polynome=: adresse de la première cellule du polynome.
+***** Variables
+- =cell_t ** prec=: pointeur de pointeur sur l'adresse de la cellule précédente.
+**** Hypothese 
+Le polynôme est trié par ordre croissant.
+**** Liste des cas
+poly_derive foncitonne quand :
+- le polynome est vide
+- le polynome est quelconque et respecte l'hypothèse
+- le polynome contient un maillon de degré nul et qui respecte l'hypothèse : la derivé d'une constante provoque la suppression du maillon du polynôme
+
+*** poly_add
+**** Description
+
+#+begin_example
+La fonction ajoute deux polynômes représentés par une liste chaînés donnés en paramètre.
+Les polynôme sont supposés triés par ordre croissant de ses degrés.
+Pour cela, on parcourt le polynôme 1 et le polynôme 2
+avec des pointeurs de pointeurs précédents.
+On compare le degre des cellules du polynôme 1 et du polynôme 2:
+- Si le degré du monome du polynôme 1 est égale à celui du polynôme 2:
+  - Si l'ajout des coefficients vaut zéro (monôme nul):
+    - On supprime la cellule de polynôme 1 (aucun ajout)
+  - Sinon:
+    - On ajoute les coefficients des deux cellules dans celle du polynôme 1.
+    - On avance à la cellule suivante du polynôme 1.
+- Sinon:
+  - Si le degré du monôme du polynôme 1 est supérieur à celui du polynôme 2:
+    - On sauvegarde la cellule suivante du polynôme 2.
+    - On ajoute la cellule du polynôme 2 au polynôme 1.
+    - On reprend le parcours de P2 à partir de la cellule sauvegardé auparavant.
+  - Sinon:
+    - On avance dans le polynome 1.
+A la fin du parcours, on regarde s'il reste des cellules dans le polynôme 2. Si oui,
+on redirige la tête du polynôme 2 sur la fin du polynôme 1 et on rend nul la tête du polynôme 2.
+#+end_example
+
+**** Algorithme
+
+#+begin_src latex
+  \begin{algorithm}[H]
+    \caption{Procédure d'addition de deux polynomes}\label{alg:two}
+    \KwData{E: $poly1$, $poly2$}
+    $m(precP1) \gets poly1$\;
+    $m(precP2) \gets poly2$\;
+    \While{$cm(precP1) \neq NIL$ ET $cm(precP2) \neq NIL$}{
+      \eIf{$cm(degree(val(cm(precP1)))) = (degree(val(cm(precP2))))$}{
+	\eIf{$abs(cm(coef(val(cm(precP1)))) + cm(coef(val(cm(precP2)))))$}{
+	  $supprimerCellule(precP2)$\;
+	}{
+	  $cm(coef(val(cm(precP1)))) + cm(coef(val(cm(precP2))))$\;
+	}
+      }{\eIf{$cm(degree(val(cm(precP1)))) > (degree(val(cm(precP2))))$}{
+	  $m(tmp) \gets adresse(next(cm(precP2)))$\;
+	  $ajouterCellule(precP1, cm(precP2))$\;
+	  $m(precP2) \gets tmp$\;
+	}{
+	  $m(precP1) \gets adresse(next(cm(precP1)))$\;
+      }}
+    }
+    \If{$cm(precP2) \neq NIL$}{
+      $m(cm(precP1)) \gets cm(precP2)$\;
+      $m(cm(precP2)) \gets NIL$\;
+    }
+  \end{algorithm}
+#+end_src
+
+**** Signature
+
+#+begin_src c
+void poly_add(cell_t ** poly1, cell_t ** poly2);
+#+end_src
+
+**** Code source
+
+#+begin_src c -n
+  /**
+   * @brief compute P1 = P1 + P2, P2 become empty
+   * @param poly1 [in, out] address of the 1st polynomial's head pointer
+   * @param poly2 [in, out] address of the 2nd polynomial's head pointer
+   */
+
+void poly_add(cell_t ** poly1, cell_t ** poly2)
+// hypothese : P1 et P2 triés par ordre croissant
+{
+    cell_t ** precP1 = poly1;    // precedent poly1, avance avec prec pour
+				 // insertion et suppression
+    cell_t ** precP2 = poly2;    // precedent poly2, avance avec prec pour
+				 // insertion et suppression
+                                 // currP1 = (*precP1)->val
+    cell_t * tmp = NULL; // var temporaire
+    
+    while (NULL != (*precP1) && NULL != (*precP2))
+    // on parcours jusqu'a ce qu'on arrive au dernier maillon de P1 ou P2
+    {
+	if ((*precP1)->val.degree == (*precP2)->val.degree) //même degre
+	{
+	    if (fabs ((*precP1)->val.coef + (*precP2)->val.coef) // fabs => math.h
+		                      < DBL_EPSILON) // <==> == 0 pour double 
+		//si ajout provoque coef null, on supprime le currP1
+	    {
+		LL_del_cell(precP1);
+	    }
+	    else // sinon on modifie la valeur du coef de p1
+	    {
+		(*precP1)->val.coef += (*precP2)->val.coef; // somme coef
+		precP1 = &(*precP1)->next; // avance P1 d'un maillon
+	    }
+	    LL_del_cell(precP2); // libere la memoire le prec de P2 (+ avance P2)
+	}
+	else if (((*precP1)->val.degree > (*precP2)->val.degree))
+            // si deg currP1 > deg currP2,
+	    //   alors on insère le maillon currP2 entre precP1 et currP1
+	{
+	    tmp = (*precP2)->next; // sauvegarde suivant P2
+	    LL_add_cell(precP1, *precP2); // ajout du maillon
+	    precP2 = &tmp; 
+	    
+	}
+	else // sinon deg currP1 < deg currP2
+	{
+	    precP1 = &(*precP1)->next; // alors on avance precP1 à son suivant
+	}
+    }
+    if (NULL != (*precP2))
+     // cas où la dimension de P1 est inférieure à celle de P2
+     // il faut ajouter la fin du polynome de P2 à P1
+    {
+	*precP1 = *precP2; // chainage fin P2 a fin P1
+	*precP2 = NULL; // P2 pointe sur NULL, plusde reference au maillon de P1 
+    }
+}
+#+end_src
+
+**** Lexique
+***** Paramètres
+- =cell_t ** poly1=: adresse du premier polynome à additionner.
+- =cell_t ** poly2=: adresse du deuxième polynome à additionner.
+***** Variables
+- =cell_t ** precP1=: pointeur de pointeur sur l'adresse de la cellule précédente.
+- =cell_t ** precP2=: pointeur de pointeur sur l'adresse de la cellule précédente.
+- =cell_t * tmp=: sauvegarde du suivant du polynome 2 lorsque que l'on ajoute la
+	cellule du polynome 2 au polynome 1
+**** Hypothèse
+Il faut que les deux polynômes soient triés par ordre de degré croissant.
+**** Liste des cas
+Lorsque l'hypothèse de départ est respectée, poly_add fonctionne quand :
+- P1 est NULL, P1 devient P2, et P2 devient NULL
+- P2 NULL, ne fait rien
+- P1 + P2 de la même taille
+- P1 + P2 avec des tailles différentes
+- P1 + P2 provoquant des suppressions de monôme, exemple : m1 = 5x^2 + m2 = -5x^2
+- s'il y a une insertion d'un monôme de P2, exemple : P1 = 1x^0 + 2x^2 et P2 =1X^1 
+
+*** poly_prod
+**** Description
+
+#+begin_example
+La fonction multiplie deux polynômes, représenté par une liste chaînée, donnés en paramètre.
+Les polynômes sont supposés triés par ordre croissant de ses degrés.
+Pour cela, on parcourt chaque cellule d'un polynôme, ici le polynôme 2.
+Pour chaque cellule du polynome parcouru, on fait :
+  - On crée un polynôme temporaire qui contient la multiplication entre le
+monôme courant du polynôme 2 et le polynôme 1
+  - On fait une addition entre le polynôme précédemment obtenue et le polynôme résultat
+On renvoie le nouveau polynome résultat.
+#+end_example
+
+**** Algorithme
+
+#+begin_src latex
+  \begin{algorithm}[H]
+    \caption{Procédure de multiplication de deux polynomes}\label{alg:two}
+    \KwData{E: $poly1$, $poly2$}
+    $m(currP2) \gets cm(poly2)$\;
+    $m(polyRes) \gets NIL$\;
+    \While{$cm(currP2) \neq NIL$}{
+      $m(polyTmp) \gets cm(multiplicationPolynomeParMonome(adresse(val(currP2)), poly1)$\;
+      $ajouterPolynomes(polyTmp, polyRes)$\;
+      $m(currP2) \gets next(cm(currP2))$\;
+    }
+    \Return{$polyRes$\;}
+  \end{algorithm}
+#+end_src
+
+**** Signature
+
+#+begin_src c
+cell_t * poly_prod(cell_t ** poly1, cell_t ** poly2)
+#+end_src
+
+**** Code source
+
+#+begin_src c -n
+  /** 
+   * @brief compute P1 * P2
+   * @param poly1 [in, out] head pointer of the 1st polynomial
+   * @param poly2 [in, out] head pointer of the 2nd polynomial
+   * @return P3 = P1*P2
+   */
+  cell_t * poly_prod(cell_t ** poly1, cell_t ** poly2)
+  {  
+      cell_t * poly_tmp = NULL; // polynome temporaire
+      cell_t * poly_res = NULL; // polynome qui va contenir le resultat
+      cell_t * currP2 = (*poly2); // maillon courant de P2
+    
+      while(currP2 != NULL) // pour chaque maillon de P2
+      {
+	  // multication maillon de P2 avec P1, forme poly temporaire
+	  poly_tmp = LL_multication_monome_to_list(&currP2->val, poly1);
+
+	  // addition entre poly_tmp et pol_res, occurence 1 : poly_res <-poly_tmp + NULL 
+	  poly_add(&poly_res, &poly_tmp);
+
+	  // avance currP2
+	  currP2 = currP2->next;
+      }
+      // retourne P3, construit avec la somme des poly_tmp
+      return poly_res; 
+  }
+#+end_src
+
+**** Lexique
+***** Paramètres
+- =cell_t ** poly1=: adresse du premier polynome.
+- =cell_t ** poly2=: adresse du deuxième polynome.
+***** Variables
+- =cell_t * poly_tmp=: pointeur vers le polynome temporaire.
+- =cell_t * poly_res=: pointeur vers le polynome temporaire.
+- =cell_t * currP2=: pointeur courante de poly2.
+
+**** Hypothèses
+Le polynome 1 et le polynome 2 sont triés par ordre de degré croissant, sinon
+il y a un problème lors de l'addition.
+
+**** Liste de cas
+Soit P3 = P1*P2.
+
+Lorsque l'hypothèse de départ est respectée, poly_prod fonctionne quand :
+- si P1 est NULL, P3 vaut NULL
+- si P2 est NULL, P3 vaut NULL
+- si P1 et P2 sont NULL, P3 vaut NULL
+- si la taille de P1 est différente de P2, il n'y a pas de cas particulier contrairement à poly_add
+- P1 et P2 quelconque, mais qui respecte l'hypothèse
+
+* Présentation des tests
+Dans cette partie, nous allons présenter brièvement l'ensemble des tests.
+
+** Tests dans linkedlist_main
+
+Les tests présents dans *linkedlist_main.c* permettent de tester les fonctions qui
+sont codées dans *linkedlist.c* et dans *valCell.c*.
+
+Les premiers tests concernent les fonctions dans *valCell.c*, on y trouve :
+- monom_degree_cmp : vérifie que l'égalité et la notion d'ordre entre 2 maillons soit bien respectées
+- monom_save2file : vérifie que le monôme soit correctement écrit dans le FILE passé en paramètre
+
+Puis les tests suivant concernent les fonctions dans *linkedlist.c*,
+on y retrouve :
+- LL_init_list : vérifie que lors de l'initialisation, la liste passée en paramètre pointe sur NULL
+- LL_create_cell : vérifie qu'il y a une bonne allocation lors de la création et que la cellule créée prend les valeurs du maillon passé en paramètre
+- LL_add_cell1 : test l'insertion d'un monôme en tête de liste
+- LL_add_cell2 et LL_add_cell3 : test l'insertion de plusieurs monômes en tête de liste
+- LL_create_listefromFileName0 : vérifie la bonne récupération depuis un fichier
+- LL_create_listefromFileName1 : vérifie que la liste est vide quand le fichier n'existe pas
+- LL_save_list_toFile0 : vérifie que la sauvegarde se passe bien pour une liste quelconque
+- LL_save_list_toFile1 : vérifie qu'il n'y a pas de sauvegarde pour une liste NULL
+- LL_search_prev1 : vérifie que la fonction renvoie le bon précédent quand le maillon cherché se trouve au milieu de la liste
+- LL_search_prev2 : vérifie que la fonction renvoie le bon précédent quand le maillon cherché se trouve en tête de la liste
+- LL_search_prev3 : vérifie que la fonction renvoie le bon précédent quand le maillon cherché se trouve à la fin de la liste
+- LL_del_cell1 : vérifie que la fonction supprime le bon maillon quand il se trouve au milieu de la liste
+- LL_del_cell2 : vérifie que la fonction supprime le bon maillon quand il se trouve en tête de la liste
+- LL_del_cell3 : vérifie que la fonction supprime le bon maillon quand il se trouve en fin de liste
+- LL_free_list0 : vérifie bonne libération sur une liste non vide
+- LL_free_list1 : vérifie que la libération sur une liste vide ne provoque pas d'erreur
+- LL_save_list_toFileName0 : vérifie que la sauvegarde d'une liste non vide fonctionne dans un fichier dont le nom est donné en paramètre
+- LL_save_list_toFileName1 : vérifie que la sauvegarde d'une liste vide ne fait rien sur un fichier dont le nom est donné en paramètre
+- LL_multication_monome_to_list0 : vérifie que la multiplication entre un monôme NULL et une liste non NULL vaut une liste NULL
+- LL_multication_monome_to_list1 : vérifie que la multiplication entre un monôme non NULL et une liste non NULL est correct
+- LL_multication_monome_to_list2 : vérifie que la multiplication entre un monôme non NULL et une liste NULL vaut une liste NULL
+- LL_multication_monome_to_list3 : vérifie que la multiplication entre un monôme NULL et une liste NULL vaut une liste NULL
+
+
+Voici une photo prouvant qu'il n'y a pas de fuites de mémoires, ni d'erreur de
+mémoire dans le fichier *linkedlist_main.c* :
+
+#+CAPTION: Test valgrind sur les listes chaînées
+file:img/test_valgrind_linkedlist.png
+
+** Tests dans polynome_main
+Les tests présents dans *polynome_main.c* permettent de tester les fonctions qui
+sont codées dans *polynome.c*.
+
+L'affichage des tests s'effectue grâce à la fonction monom_save2fileforpoly, qui
+respecte la sérialisation suivante : "(%2.f, %d)". Le fichier de test à changer
+lors de la dernière séance, nous n'avons pas effectué les changements car nous
+avions déjà fini l'ensemble des tests. De plus, l'affichage dépend de la fonction
+donnée en paramètre, donc non-pénalisant pour les tests de l'évaluation.
+
+Dans le fichier tests, on retrouve :
+- LL_init_list : vérifie que lors de l'initialisation d'un polynôme, ce dernier pointe vers NULL
+-  Poly_derive1 : vérifie la bonne dérivation avec un polynôme quelconque
+-  Poly_derive2 : vérifie la bonne dérivation avec un polynôme possédant un monôme de degré null
+- Poly_derive3 : vérifie que la dérivation d'un polynôme NULL ne provoque pas d'erreur
+- Poly_addition0 : vérifie que l'addition est correcte entre deux polynômes avec le même nombre de maillons et de même degrés
+- Poly_addition1 : vérifie que l'addition est correcte entre deux polynômes quand l'addition provoque la suppression d'un monôme du milieu
+- Poly_addition2 : vérifie que l'addition est correcte entre deux polynômes quand l'addition provoque la suppression du monôme en tête
+- Poly_addition3 : vérifie que l'addition est correcte entre deux polynômes quand l'addition provoque la suppression du dernier monôme 
+- Poly_addition4 : vérifie que l'addition est correcte entre deux polynômes de taille différente (dim P1 > dim P2)
+- Poly_addition5 :  vérifie que l'addition est correcte entre deux polynômes de taille différente (dim P1 > dim P2)
+- Poly_addition6 : vérifie que l'addition est correcte lorsque des maillons de P2 doivent être insérés dans P1
+- Poly_addition7 : vérifie que l'addition est correcte lorsque la somme provoque le polynôme NULL [P1 + (-1*P1)]
+- Poly_addition8 : vérifie que l'addition vaut P2 lorsque P1 est NULL
+- Poly_addition9 : vérifie que l'addition vaut P1 lorsque P2 est NULL
+- Poly_addition10 : vérifie que l'addition vaut NULL lorsque P1 et P2 sont NULL
+- Poly_produit0 : vérifie que le produit entre deux polynômes quelconque est correcte
+- Poly_produit1 : vérifie que le produit entre P1 NULL et P2 quelconque donne un polynôme NULL
+- Poly_produit2 : vérifie que le produit entre P1 quelconque et P2 NULL donne un polynôme NULL
+- Poly_produit3 : vérifie que le produit entre P1 NULL et P2 NULL donne un polynôme NULL, ne provoque pas d'erreur
+
+Voici une photo prouvant qu'il n'y a pas de fuites de mémoires, ni d'erreur de
+mémoire dans le fichier *polynome_main.c* 
+
+#+CAPTION: Test valgrind sur les polynomes
+file:img/test_valgrind_polynome.png
+
