@@ -13,5 +13,5 @@ Mettre en pratique une implémentation des listes chaînées vu en cours pour cr
      #+end_src
 
 ** Auteurs
-DUREL Enzo
-VILLEPREUX Thibault
++ DUREL Enzo
++ VILLEPREUX Thibault
