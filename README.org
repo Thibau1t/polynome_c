@@ -1,4 +1,4 @@
-* SDD TP1: Polynomes
+* SDD TP1: Polynômes
 ** Objectif
 
 Mettre en pratique une implémentation des listes chaînées vu en cours pour créer et manipuler des polynômes.
