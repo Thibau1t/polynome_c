@@ -1,18 +1,9 @@
 * SDD TP1: Polynomes
-** Sommaire
+** Objectif
 
-Travaux sur le sujet n°1 des TPs de ZZ1 Promo 25. Il s'agit ici de mettre en pratique une implémentation des listes chaînées vu en cours au semestre 1. Il s'agit sur ce TP une implémentation des polynomes.
-
-** Pour commencer
-*** Pré-requis :
-**** C (standard)
-
-    Liste des bibliothèques utilisées :
-    - =stdio.h=
-    - =stdlib.h=
+Mettre en pratique une implémentation des listes chaînées vu en cours pour créer et manipuler des polynômes.
     
-** Démarrage
-*** Linux
+** Executer
 
      #+begin_src shell
        cd src
@@ -21,34 +12,6 @@ Travaux sur le sujet n°1 des TPs de ZZ1 Promo 25. Il s'agit ici de mettre en pr
        ./polynomial
      #+end_src
 
-*** Windows
-** Outils
-
-- Emacs
-- 
-- 
-
-** Versions
-
-*Dernière version stable :* 1.0
-
-*Dernière version :* 1.0
-
-[[../../tags][Liste des versions]]
-
 ** Auteurs
-*** Responsable de TP
-
-- BURON Maxime
-
-*** Equipe de développement
-      
-- DUREL Enzo
-- VILLEPREUX Thibault
-
-** Licence
-
-Le projet est *open-source*
-   
-
-   
+DUREL Enzo
+VILLEPREUX Thibault
